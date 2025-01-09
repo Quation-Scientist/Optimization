@@ -83,7 +83,7 @@ if login_button:
 page_bg_img = '''
 <style>
 body {
-    background-image: url("https://www.example.com/truck-background.jpg");
+    background-image: url("https://img.freepik.com/free-vector/gradient-transport-truck_23-2149150714.jpg");
     background-size: cover;
 }
 </style>
@@ -164,25 +164,4 @@ if username == "admin" and password == "admin":
             st.write("Additional Rolls that can be accommodated:")
             st.table(additional_rolls_df)
         
-        # Create CSV report
-        csv_buffer = io.StringIO()
-        for i, data in enumerate(report_data):
-            truck_type = data['Truck Type']
-            box_df = pd.DataFrame(data['Box Counts'])
-            roll_df = pd.DataFrame(data['Roll Counts'])
-            additional_boxes_df = pd.DataFrame(data['Additional Boxes'])
-            additional_rolls_df = pd.DataFrame(data['Additional Rolls'])
-            
-            csv_buffer.write(f"\n{truck_type} Boxes\n")
-            box_df.to_csv(csv_buffer, index=False)
-            
-            csv_buffer.write(f"\n{truck_type} Rolls\n")
-            roll_df.to_csv(csv_buffer, index=False)
-            
-            csv_buffer.write(f"\n{truck_type} Additional Boxes\n")
-            additional_boxes_df.to_csv(csv_buffer, index=False)
-            
-            csv_buffer.write(f"\n{truck_type} Additional Rolls\n")
-            additional_rolls_df.to_csv(csv_buffer, index=False)
         
-        st.download_button
