@@ -83,7 +83,7 @@ if login_button:
 page_bg_img = '''
 <style>
 body {
-    background-image: url("https://img.freepik.com/free-vector/gradient-transport-truck_23-2149150714.jpg");
+    background-image: url("https://www.example.com/truck-background.jpg");
     background-size: cover;
 }
 </style>
@@ -164,24 +164,25 @@ if username == "admin" and password == "admin":
             st.write("Additional Rolls that can be accommodated:")
             st.table(additional_rolls_df)
         
-        # Create Excel report
-        excel_buffer = io.BytesIO()
-        with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
-            for i, data in enumerate(report_data):
-                truck_type = data['Truck Type']
-                box_df = pd.DataFrame(data['Box Counts'])
-                roll_df = pd.DataFrame(data['Roll Counts'])
-                additional_boxes_df = pd.DataFrame(data['Additional Boxes'])
-                additional_rolls_df = pd.DataFrame(data['Additional Rolls'])
-                
-                box_df.to_excel(writer, sheet_name=f'{truck_type} Boxes', index=False)
-                roll_df.to_excel(writer, sheet_name=f'{truck_type} Rolls', index=False)
-                additional_boxes_df.to_excel(writer, sheet_name=f'{truck_type} Additional Boxes', index=False)
-                additional_rolls_df.to_excel(writer, sheet_name=f'{truck_type} Additional Rolls', index=False)
-                
-        st.download_button(
-            label="Download Report as Excel",
-            data=excel_buffer,
-            file_name="truck_load_optimization_report.xlsx",
-            mime="application/vnd.ms-excel"
-        )
+        # Create CSV report
+        csv_buffer = io.StringIO()
+        for i, data in enumerate(report_data):
+            truck_type = data['Truck Type']
+            box_df = pd.DataFrame(data['Box Counts'])
+            roll_df = pd.DataFrame(data['Roll Counts'])
+            additional_boxes_df = pd.DataFrame(data['Additional Boxes'])
+            additional_rolls_df = pd.DataFrame(data['Additional Rolls'])
+            
+            csv_buffer.write(f"\n{truck_type} Boxes\n")
+            box_df.to_csv(csv_buffer, index=False)
+            
+            csv_buffer.write(f"\n{truck_type} Rolls\n")
+            roll_df.to_csv(csv_buffer, index=False)
+            
+            csv_buffer.write(f"\n{truck_type} Additional Boxes\n")
+            additional_boxes_df.to_csv(csv_buffer, index=False)
+            
+            csv_buffer.write(f"\n{truck_type} Additional Rolls\n")
+            additional_rolls_df.to_csv(csv_buffer, index=False)
+        
+        st.download_button
