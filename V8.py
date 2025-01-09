@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import math
-from fpdf import FPDF
+import io
 
 # Conversion factors
 FEET_TO_INCHES = 12
@@ -64,33 +64,6 @@ def optimize_loading(trucks, boxes, rolls):
     
     return results
 
-# Function to generate PDF report
-def generate_pdf_report(results):
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, txt="Truck Load Optimization Report", ln=True, align='C')
-    
-    for result in results:
-        pdf.cell(200, 10, txt=f"Truck Type {results.index(result) + 1}", ln=True, align='L')
-        pdf.cell(200, 10, txt="Box Counts:", ln=True, align='L')
-        for key, value in result['box_counts'].items():
-            pdf.cell(200, 10, txt=f"{key}: {value}", ln=True, align='L')
-        pdf.cell(200, 10, txt="Roll Counts:", ln=True, align='L')
-        for key, value in result['roll_counts'].items():
-            pdf.cell(200, 10, txt=f"{key}: {value}", ln=True, align='L')
-        pdf.cell(200, 10, txt=f"Remaining Volume: {result['remaining_volume']} cubic inches", ln=True, align='L')
-        pdf.cell(200, 10, txt="Additional Boxes that can be accommodated:", ln=True, align='L')
-        for key, value in result['additional_boxes'].items():
-            pdf.cell(200, 10, txt=f"{key}: {value}", ln=True, align='L')
-        pdf.cell(200, 10, txt="Additional Rolls that can be accommodated:", ln=True, align='L')
-        for key, value in result['additional_rolls'].items():
-            pdf.cell(200, 10, txt=f"{key}: {value}", ln=True, align='L')
-        pdf.ln(10)
-    
-    pdf.output("truck_load_optimization_report.pdf")
-
 # Streamlit App
 st.title("Truck Load Optimization")
 
@@ -101,7 +74,7 @@ password = st.sidebar.text_input("Password", type="password")
 login_button = st.sidebar.button("Login")
 
 if login_button:
-    if username == "admin" and password == "admin":
+    if username == "admin" and password == "password":
         st.sidebar.success("Logged in successfully!")
     else:
         st.sidebar.error("Invalid username or password")
@@ -110,7 +83,7 @@ if login_button:
 page_bg_img = '''
 <style>
 body {
-    background-image: url("https://www.example.com/truck-background.jpg");
+    background-image: url("https://img.freepik.com/free-vector/gradient-transport-truck_23-2149150714.jpg");
     background-size: cover;
 }
 </style>
@@ -118,7 +91,7 @@ body {
 
 st.markdown(page_bg_img, unsafe_allow_html=True)
 
-if username == "admin" and password == "password":
+if username == "admin" and password == "admin":
     st.sidebar.header("Input Data")
 
     # Input for trucks (in feet)
@@ -159,13 +132,24 @@ if username == "admin" and password == "password":
     if st.button("Run Optimization"):
         results = optimize_loading(trucks, boxes, rolls)
         
+        report_data = []
         for result in results:
-            st.subheader(f"Truck Type {results.index(result) + 1}")
+            truck_type = f"Truck Type {results.index(result) + 1}"
             box_df = pd.DataFrame(result['box_counts'].items(), columns=['Box Type', 'Count'])
             roll_df = pd.DataFrame(result['roll_counts'].items(), columns=['Roll Type', 'Count'])
             additional_boxes_df = pd.DataFrame(result['additional_boxes'].items(), columns=['Box Type', 'Additional Count'])
             additional_rolls_df = pd.DataFrame(result['additional_rolls'].items(), columns=['Roll Type', 'Additional Count'])
             
+            report_data.append({
+                'Truck Type': truck_type,
+                'Box Counts': box_df.to_dict(orient='records'),
+                'Roll Counts': roll_df.to_dict(orient='records'),
+                'Remaining Volume': result['remaining_volume'],
+                'Additional Boxes': additional_boxes_df.to_dict(orient='records'),
+                'Additional Rolls': additional_rolls_df.to_dict(orient='records')
+            })
+            
+            st.write(truck_type)
             st.write("Box Counts:")
             st.table(box_df)
             
@@ -180,6 +164,24 @@ if username == "admin" and password == "password":
             st.write("Additional Rolls that can be accommodated:")
             st.table(additional_rolls_df)
         
-        # Generate PDF report
-        generate_pdf_report(results)
-        st.success("PDF report has been generated and saved as 'truck_load_optimization_report.pdf'")
+        # Create Excel report
+        excel_buffer = io.BytesIO()
+        with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
+            for i, data in enumerate(report_data):
+                truck_type = data['Truck Type']
+                box_df = pd.DataFrame(data['Box Counts'])
+                roll_df = pd.DataFrame(data['Roll Counts'])
+                additional_boxes_df = pd.DataFrame(data['Additional Boxes'])
+                additional_rolls_df = pd.DataFrame(data['Additional Rolls'])
+                
+                box_df.to_excel(writer, sheet_name=f'{truck_type} Boxes', index=False)
+                roll_df.to_excel(writer, sheet_name=f'{truck_type} Rolls', index=False)
+                additional_boxes_df.to_excel(writer, sheet_name=f'{truck_type} Additional Boxes', index=False)
+                additional_rolls_df.to_excel(writer, sheet_name=f'{truck_type} Additional Rolls', index=False)
+                
+        st.download_button(
+            label="Download Report as Excel",
+            data=excel_buffer,
+            file_name="truck_load_optimization_report.xlsx",
+            mime="application/vnd.ms-excel"
+        )
