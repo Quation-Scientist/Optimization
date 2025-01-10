@@ -36,22 +36,28 @@ def optimize_loading(trucks, boxes, rolls):
         # Fit boxes
         for i, box in enumerate(sorted_boxes):
             box_volume = box['volume']
-            max_fit = int(remaining_volume // box_volume)
-            actual_fit = min(max_fit, box['quantity'])
-            box_counts[f"box_type_{i+1}"] = actual_fit
-            remaining_volume -= actual_fit * box_volume
+            if remaining_volume >= box_volume and box['quantity'] > 0:
+                max_fit = int(remaining_volume // box_volume)
+                actual_fit = min(max_fit, box['quantity'])
+                box_counts[f"box_type_{i+1}"] = actual_fit
+                remaining_volume -= actual_fit * box_volume
+            else:
+                box_counts[f"box_type_{i+1}"] = 0
         
         # Fit rolls
         for i, roll in enumerate(sorted_rolls):
             roll_volume = roll['volume']
-            max_fit = int(remaining_volume // roll_volume)
-            actual_fit = min(max_fit, roll['quantity'])
-            roll_counts[f"roll_type_{i+1}"] = actual_fit
-            remaining_volume -= actual_fit * roll_volume
+            if remaining_volume >= roll_volume and roll['quantity'] > 0:
+                max_fit = int(remaining_volume // roll_volume)
+                actual_fit = min(max_fit, roll['quantity'])
+                roll_counts[f"roll_type_{i+1}"] = actual_fit
+                remaining_volume -= actual_fit * roll_volume
+            else:
+                roll_counts[f"roll_type_{i+1}"] = 0
         
         # Calculate how many more can be accommodated
-        additional_boxes = {f"box_type_{i+1}": int(remaining_volume // box['volume']) for i, box in enumerate(sorted_boxes)}
-        additional_rolls = {f"roll_type_{i+1}": int(remaining_volume // roll['volume']) for i, roll in enumerate(sorted_rolls)}
+        additional_boxes = {f"box_type_{i+1}": int(remaining_volume // box['volume']) if box['volume'] > 0 else 0 for i, box in enumerate(sorted_boxes)}
+        additional_rolls = {f"roll_type_{i+1}": int(remaining_volume // roll['volume']) if roll['volume'] > 0 else 0 for i, roll in enumerate(sorted_rolls)}
         
         results.append({
             'truck': truck,
@@ -83,7 +89,7 @@ if login_button:
 page_bg_img = '''
 <style>
 body {
-    background-image: url("https://img.freepik.com/free-vector/gradient-transport-truck_23-2149150714.jpg");
+    background-image: url("https://www.example.com/truck-background.jpg");
     background-size: cover;
 }
 </style>
@@ -91,7 +97,7 @@ body {
 
 st.markdown(page_bg_img, unsafe_allow_html=True)
 
-if username == "admin" and password == "admin":
+if username == "admin" and password == "password":
     st.sidebar.header("Input Data")
 
     # Input for trucks (in feet)
