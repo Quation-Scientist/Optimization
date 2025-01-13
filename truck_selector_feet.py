@@ -8,45 +8,53 @@ METER_TO_FEET = 3.28084
 def calculate_roll_volume(diameter, length):
     return math.pi * (diameter / 2) ** 2 * length
 
-# Function to optimize truck selection using a greedy algorithm
-def optimize_truck_selection(truck_data, total_volume_required, total_weight_required):
+# Function to optimize truck selection and determine how many rolls can fit
+def optimize_truck_selection(truck_data, total_volume_required, total_weight_required, roll_volume, roll_weight):
     # Sort trucks by volume and weight capacity
     truck_data = sorted(truck_data, key=lambda x: (x["Volume (m³)"], x["Weight Capacity (kg)"]))
-
-    trucks_used = []
+    
+    rolls_accommodated = []
     for truck in truck_data:
+        truck_volume_remaining = truck["Volume (m³)"]
+        truck_weight_remaining = truck["Weight Capacity (kg)"]
+        
+        # Calculate how many rolls this truck can carry
+        rolls_by_volume = truck_volume_remaining // roll_volume
+        rolls_by_weight = truck_weight_remaining // roll_weight
+        rolls_in_truck = min(rolls_by_volume, rolls_by_weight)
+
+        rolls_accommodated.append({
+            "Name": truck["Name"],
+            "Rolls Accommodated": rolls_in_truck,
+            "Volume (m³) Remaining": truck_volume_remaining - rolls_in_truck * roll_volume,
+            "Weight (kg) Remaining": truck_weight_remaining - rolls_in_truck * roll_weight
+        })
+        
+        total_volume_required -= rolls_in_truck * roll_volume
+        total_weight_required -= rolls_in_truck * roll_weight
+        
         if total_volume_required <= 0 and total_weight_required <= 0:
             break
-        if truck["Volume (m³)"] > 0 and truck["Weight Capacity (kg)"] > 0:
-            trucks_used.append(truck)
-            total_volume_required -= truck["Volume (m³)"]
-            total_weight_required -= truck["Weight Capacity (kg)"]
 
     if total_volume_required > 0 or total_weight_required > 0:
         return None  # Not all rolls can be accommodated
-    return trucks_used
+    return rolls_accommodated
 
 # Streamlit app
-st.title('Optimized Truck Selection for Multiple Roll Types')
+st.title('Truck Selection: Number of Rolls Per Truck')
 
-# Input for multiple roll types
+# Input for roll specifications
 st.header('Roll Specifications')
-roll_types = st.number_input('Number of Different Roll Types', min_value=1, step=1)
+roll_diameter = st.number_input('Roll Diameter (meters)', min_value=0.0, step=0.1)
+roll_length = st.number_input('Roll Length (meters)', min_value=0.0, step=0.1)
+roll_weight = st.number_input('Roll Weight (kg)', min_value=0.0, step=0.1)
+number_of_rolls = st.number_input('Number of Rolls', min_value=1, step=1)
 
-total_volume_required = 0
-total_weight_required = 0
+# Calculate roll volume
+roll_volume = calculate_roll_volume(roll_diameter, roll_length)
 
-for i in range(roll_types):
-    st.subheader(f'Roll Type {i+1}')
-    roll_diameter = st.number_input(f'Roll {i+1} Diameter (meters)', min_value=0.0, step=0.1, key=f'diameter_{i}')
-    roll_length = st.number_input(f'Roll {i+1} Length (meters)', min_value=0.0, step=0.1, key=f'length_{i}')
-    roll_weight = st.number_input(f'Roll {i+1} Weight (kg)', min_value=0.0, step=0.1, key=f'weight_{i}')
-    number_of_rolls = st.number_input(f'Number of Rolls for Type {i+1}', min_value=1, step=1, key=f'count_{i}')
-    
-    # Calculate total volume and weight for this roll type
-    roll_volume = calculate_roll_volume(roll_diameter, roll_length)
-    total_volume_required += roll_volume * number_of_rolls
-    total_weight_required += roll_weight * number_of_rolls
+total_volume_required = roll_volume * number_of_rolls
+total_weight_required = roll_weight * number_of_rolls
 
 # Predefined truck dimensions (no Excel upload)
 truck_data = [
@@ -61,14 +69,15 @@ for truck in truck_data:
                            (truck["Width (ft)"] / METER_TO_FEET) * \
                            (truck["Height (ft)"] / METER_TO_FEET)
 
-# Optimize truck selection
-trucks_used = optimize_truck_selection(truck_data, total_volume_required, total_weight_required)
+# Optimize truck selection and calculate number of rolls per truck
+rolls_accommodated = optimize_truck_selection(truck_data, total_volume_required, total_weight_required, roll_volume, roll_weight)
 
 # Display the result
-if trucks_used:
-    st.write(f'Total Trucks Used: {len(trucks_used)}')
-    for truck in trucks_used:
-        st.write(f'{truck["Name"]}: {truck["Length (ft)"]} ft (L) x {truck["Width (ft)"]} ft (W) x {truck["Height (ft)"]} ft (H)')
-        st.write(f'Weight Capacity: {truck["Weight Capacity (kg)"]} kg')
+if rolls_accommodated:
+    st.write(f'Total Rolls: {number_of_rolls}')
+    for truck in rolls_accommodated:
+        st.write(f'{truck["Name"]} can accommodate {truck["Rolls Accommodated"]} rolls')
+        st.write(f'Volume Remaining: {truck["Volume (m³) Remaining"]:.2f} m³')
+        st.write(f'Weight Remaining: {truck["Weight (kg) Remaining"]:.2f} kg')
 else:
-    st.write('No suitable combination of trucks found. Consider using more or different trucks.')
+    st.write('Not all rolls can be accommodated. Consider using more trucks or adjusting roll specifications.')
