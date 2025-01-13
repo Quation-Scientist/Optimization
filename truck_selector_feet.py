@@ -54,7 +54,7 @@ def optimize_truck_selection(truck_data, total_volume_required, total_weight_req
 st.title('Truck Selection: Number of Rolls Per Truck')
 
 # Password for access control
-password = st.text_input("Enter password to access the app", type="admin")
+password = st.text_input("Enter password to access the app", type="password")
 
 # Check if the password is correct (replace 'yourpassword' with your desired password)
 if password != "yourpassword":
@@ -134,17 +134,24 @@ else:
             if i == 0:
                 truck_names.append(truck['Name'])
 
+    # Debugging: Print truck names and roll capacities
+    st.write("Truck Names:", truck_names)
+    st.write("Roll Capacities per Type:", rolls_capacity)
+
     # Plotting the truck capacity in terms of rolls
-    fig, ax = plt.subplots(figsize=(10, 6))
-    for roll_type, capacities in rolls_capacity.items():
-        ax.bar(truck_names, capacities, label=roll_type)
-    
-    ax.set_xlabel('Truck Types')
-    ax.set_ylabel('Number of Rolls')
-    ax.set_title('Truck Capacity Overview (in terms of Rolls)')
-    ax.legend()
-    
-    st.pyplot(fig)
+    if truck_names and rolls_capacity:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        for roll_type, capacities in rolls_capacity.items():
+            ax.bar(truck_names, capacities, label=roll_type)
+        
+        ax.set_xlabel('Truck Types')
+        ax.set_ylabel('Number of Rolls')
+        ax.set_title('Truck Capacity Overview (in terms of Rolls)')
+        ax.legend()
+        
+        st.pyplot(fig)
+    else:
+        st.error("Data for plotting is incomplete. Please check the inputs.")
 
     # Optimize truck selection and calculate number of rolls per truck
     rolls_accommodated = optimize_truck_selection(truck_data, total_volume_required, total_weight_required, sum(roll_volumes), sum([roll['Weight'] for roll in roll_types]))
