@@ -12,31 +12,38 @@ def calculate_roll_volume(diameter, length):
 
 # Function to optimize truck selection and determine how many rolls can fit
 def optimize_truck_selection(truck_data, total_volume_required, total_weight_required, roll_volume, roll_weight):
-    # Sort trucks by volume and weight capacity
-    truck_data = sorted(truck_data, key=lambda x: (x["Volume (m³)"], x["Weight Capacity (kg)"]))
-    
     rolls_accommodated = []
-    for truck in truck_data:
-        truck_volume_remaining = truck["Volume (m³)"]
-        truck_weight_remaining = truck["Weight Capacity (kg)"]
-        
-        # Calculate how many rolls this truck can carry
-        rolls_by_volume = truck_volume_remaining // roll_volume
-        rolls_by_weight = truck_weight_remaining // roll_weight
-        rolls_in_truck = min(rolls_by_volume, rolls_by_weight)
+    try:
+        # Sort trucks by volume and weight capacity
+        truck_data = sorted(truck_data, key=lambda x: (x["Volume (m³)"], x["Weight Capacity (kg)"]))
 
-        rolls_accommodated.append({
-            "Name": truck["Name"],
-            "Rolls Accommodated": rolls_in_truck,
-            "Volume (m³) Remaining": truck_volume_remaining - rolls_in_truck * roll_volume,
-            "Weight (kg) Remaining": truck_weight_remaining - rolls_in_truck * roll_weight
-        })
-        
-        total_volume_required -= rolls_in_truck * roll_volume
-        total_weight_required -= rolls_in_truck * roll_weight
-        
-        if total_volume_required <= 0 and total_weight_required <= 0:
-            break
+        for truck in truck_data:
+            truck_volume_remaining = truck["Volume (m³)"]
+            truck_weight_remaining = truck["Weight Capacity (kg)"]
+
+            # Calculate how many rolls this truck can carry based on volume and weight
+            rolls_by_volume = truck_volume_remaining // roll_volume
+            rolls_by_weight = truck_weight_remaining // roll_weight
+            rolls_in_truck = min(rolls_by_volume, rolls_by_weight)
+
+            rolls_accommodated.append({
+                "Name": truck["Name"],
+                "Rolls Accommodated": rolls_in_truck,
+                "Volume (m³) Remaining": truck_volume_remaining - rolls_in_truck * roll_volume,
+                "Weight (kg) Remaining": truck_weight_remaining - rolls_in_truck * roll_weight
+            })
+
+            total_volume_required -= rolls_in_truck * roll_volume
+            total_weight_required -= rolls_in_truck * roll_weight
+
+            if total_volume_required <= 0 and total_weight_required <= 0:
+                break
+    except KeyError as e:
+        st.error(f"KeyError: Missing key in truck data: {e}")
+    except TypeError as e:
+        st.error(f"TypeError: Incorrect type used in data processing: {e}")
+    except Exception as e:
+        st.error(f"Unexpected error: {e}")
 
     if total_volume_required > 0 or total_weight_required > 0:
         return None  # Not all rolls can be accommodated
@@ -74,9 +81,24 @@ if roll_volume > 0:
 
     # Convert truck dimensions from feet to cubic meters
     for truck in truck_data:
-        truck["Volume (m³)"] = (truck["Length (ft)"] / METER_TO_FEET) * \
-                               (truck["Width (ft)"] / METER_TO_FEET) * \
-                               (truck["Height (ft)"] / METER_TO_FEET)
+        try:
+            truck["Volume (m³)"] = (truck["Length (ft)"] / METER_TO_FEET) * \
+                                   (truck["Width (ft)"] / METER_TO_FEET) * \
+                                   (truck["Height (ft)"] / METER_TO_FEET)
+        except KeyError as e:
+            st.error(f"KeyError: Missing dimension key in truck data: {e}")
+        except TypeError as e:
+            st.error(f"TypeError: Incorrect type used in truck dimension conversion: {e}")
+        except Exception as e:
+            st.error(f"Unexpected error: {e}")
+
+    # Display the truck's individual capacity for rolls based on their volume and weight
+    st.subheader('Truck Capacity Overview (in terms of Rolls)')
+    for truck in truck_data:
+        rolls_by_volume = truck["Volume (m³)"] // roll_volume
+        rolls_by_weight = truck["Weight Capacity (kg)"] // roll_weight
+        rolls_possible = min(rolls_by_volume, rolls_by_weight)
+        st.write(f"{truck['Name']} can hold up to {rolls_possible} rolls based on its capacity.")
 
     # Optimize truck selection and calculate number of rolls per truck
     rolls_accommodated = optimize_truck_selection(truck_data, total_volume_required, total_weight_required, roll_volume, roll_weight)
