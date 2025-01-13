@@ -1,6 +1,5 @@
 import streamlit as st
 import math
-import matplotlib.pyplot as plt
 
 # Conversion factor: 1 meter = 3.28084 feet
 METER_TO_FEET = 3.28084
@@ -118,40 +117,6 @@ else:
             st.error(f"TypeError: Incorrect type used in truck dimension conversion: {e}")
         except Exception as e:
             st.error(f"Unexpected error: {e}")
-
-    # Display the truck's individual capacity for rolls based on their volume and weight
-    st.subheader('Truck Capacity Overview (in terms of Rolls)')
-
-    truck_names = []
-    rolls_capacity = {f"Roll Type {i+1}": [] for i in range(num_roll_types)}
-
-    for i, roll_volume in enumerate(roll_volumes):
-        for truck in truck_data:
-            rolls_by_volume = truck["Volume (m³)"] // roll_volume
-            rolls_by_weight = truck["Weight Capacity (kg)"] // roll_types[i]['Weight']
-            rolls_possible = min(rolls_by_volume, rolls_by_weight)
-            rolls_capacity[f"Roll Type {i+1}"].append(rolls_possible)
-            if i == 0:
-                truck_names.append(truck['Name'])
-
-    # Debugging: Print truck names and roll capacities
-    st.write("Truck Names:", truck_names)
-    st.write("Roll Capacities per Type:", rolls_capacity)
-
-    # Plotting the truck capacity in terms of rolls
-    if truck_names and rolls_capacity:
-        fig, ax = plt.subplots(figsize=(10, 6))
-        for roll_type, capacities in rolls_capacity.items():
-            ax.bar(truck_names, capacities, label=roll_type)
-        
-        ax.set_xlabel('Truck Types')
-        ax.set_ylabel('Number of Rolls')
-        ax.set_title('Truck Capacity Overview (in terms of Rolls)')
-        ax.legend()
-        
-        st.pyplot(fig)
-    else:
-        st.error("Data for plotting is incomplete. Please check the inputs.")
 
     # Optimize truck selection and calculate number of rolls per truck
     rolls_accommodated = optimize_truck_selection(truck_data, total_volume_required, total_weight_required, sum(roll_volumes), sum([roll['Weight'] for roll in roll_types]))
