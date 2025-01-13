@@ -1,11 +1,12 @@
 import streamlit as st
+import pandas as pd
 import math
 
 # Conversion factor: 1 meter = 3.28084 feet
 METER_TO_FEET = 3.28084
 
 # Streamlit app
-st.title('Truck Selection for Multiple Roll Types')
+st.title('Truck Selection for Multiple Roll Types with Excel Upload')
 
 # Function to calculate roll volume
 def calculate_roll_volume(diameter, length):
@@ -30,28 +31,31 @@ for i in range(roll_types):
     total_volume_required += roll_volume * number_of_rolls
     total_weight_required += roll_weight * number_of_rolls
 
-# Suggest truck dimensions
-st.header('Suggested Truck Specifications')
+# Upload truck dimensions from an Excel file
+st.header('Upload Truck Dimensions Excel File')
+uploaded_file = st.file_uploader("Choose an Excel file", type="xlsx")
 
-# Assume some standard truck sizes in feet
-trucks = [
-    {"name": "Small Truck", "length": 19.7, "width": 8.2, "height": 8.2, "weight_capacity": 5000},
-    {"name": "Medium Truck", "length": 26.2, "width": 8.2, "height": 9.8, "weight_capacity": 10000},
-    {"name": "Large Truck", "length": 39.4, "width": 8.2, "height": 11.5, "weight_capacity": 15000},
-]
+if uploaded_file:
+    # Read the Excel file
+    truck_data = pd.read_excel(uploaded_file)
+    truck_data["Volume (m³)"] = (truck_data["Length (ft)"] / METER_TO_FEET) * \
+                                (truck_data["Width (ft)"] / METER_TO_FEET) * \
+                                (truck_data["Height (ft)"] / METER_TO_FEET)
+    
+    # Find the smallest truck that can accommodate the rolls
+    suitable_truck = None
+    for _, truck in truck_data.iterrows():
+        if truck["Volume (m³)"] >= total_volume_required and truck["Weight Capacity (kg)"] >= total_weight_required:
+            suitable_truck = truck
+            break
 
-# Find the smallest truck that can accommodate the rolls
-suitable_truck = None
-for truck in trucks:
-    truck_volume_meters = (truck["length"] / METER_TO_FEET) * (truck["width"] / METER_TO_FEET) * (truck["height"] / METER_TO_FEET)
-    if truck_volume_meters >= total_volume_required and truck["weight_capacity"] >= total_weight_required:
-        suitable_truck = truck
-        break
-
-# Display the result
-if suitable_truck:
-    st.write(f'Suggested Truck: {suitable_truck["name"]}')
-    st.write(f'Truck Dimensions: {suitable_truck["length"]} ft (L) x {suitable_truck["width"]} ft (W) x {suitable_truck["height"]} ft (H)')
-    st.write(f'Truck Weight Capacity: {suitable_truck["weight_capacity"]} kg')
+    # Display the result
+    if suitable_truck is not None:
+        st.write(f'Suggested Truck: {suitable_truck["Name"]}')
+        st.write(f'Truck Dimensions: {suitable_truck["Length (ft)"]} ft (L) x {suitable_truck["Width (ft)"]} ft (W) x {suitable_truck["Height (ft)"]} ft (H)')
+        st.write(f'Truck Weight Capacity: {suitable_truck["Weight Capacity (kg)"]} kg')
+    else:
+        st.write('No suitable truck found. Consider splitting the load or using a custom truck.')
 else:
-    st.write('No suitable truck found. Consider splitting the load or using a custom truck.')
+    st.write('Please upload a truck dimensions Excel file.')
+
