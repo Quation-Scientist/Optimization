@@ -6,6 +6,8 @@ METER_TO_FEET = 3.28084
 
 # Function to calculate roll volume
 def calculate_roll_volume(diameter, length):
+    if diameter <= 0 or length <= 0:
+        raise ValueError("Diameter and Length must be greater than zero.")
     return math.pi * (diameter / 2) ** 2 * length
 
 # Function to optimize truck selection and determine how many rolls can fit
@@ -45,39 +47,48 @@ st.title('Truck Selection: Number of Rolls Per Truck')
 
 # Input for roll specifications
 st.header('Roll Specifications')
-roll_diameter = st.number_input('Roll Diameter (meters)', min_value=0.0, step=0.1)
-roll_length = st.number_input('Roll Length (meters)', min_value=0.0, step=0.1)
-roll_weight = st.number_input('Roll Weight (kg)', min_value=0.0, step=0.1)
+
+# Validate non-zero inputs for diameter, length, and weight
+roll_diameter = st.number_input('Roll Diameter (meters)', min_value=0.01, step=0.1)
+roll_length = st.number_input('Roll Length (meters)', min_value=0.01, step=0.1)
+roll_weight = st.number_input('Roll Weight (kg)', min_value=0.1, step=0.1)
 number_of_rolls = st.number_input('Number of Rolls', min_value=1, step=1)
 
 # Calculate roll volume
-roll_volume = calculate_roll_volume(roll_diameter, roll_length)
+try:
+    roll_volume = calculate_roll_volume(roll_diameter, roll_length)
+except ValueError as e:
+    st.error(f"Error: {e}")
+    roll_volume = 0
 
-total_volume_required = roll_volume * number_of_rolls
-total_weight_required = roll_weight * number_of_rolls
+if roll_volume > 0:
+    total_volume_required = roll_volume * number_of_rolls
+    total_weight_required = roll_weight * number_of_rolls
 
-# Predefined truck dimensions (no Excel upload)
-truck_data = [
-    {"Name": "Small Truck", "Length (ft)": 19.7, "Width (ft)": 8.2, "Height (ft)": 8.2, "Weight Capacity (kg)": 5000},
-    {"Name": "Medium Truck", "Length (ft)": 26.2, "Width (ft)": 8.2, "Height (ft)": 9.8, "Weight Capacity (kg)": 10000},
-    {"Name": "Large Truck", "Length (ft)": 39.4, "Width (ft)": 8.2, "Height (ft)": 11.5, "Weight Capacity (kg)": 15000},
-]
+    # Predefined truck dimensions (no Excel upload)
+    truck_data = [
+        {"Name": "Small Truck", "Length (ft)": 19.7, "Width (ft)": 8.2, "Height (ft)": 8.2, "Weight Capacity (kg)": 5000},
+        {"Name": "Medium Truck", "Length (ft)": 26.2, "Width (ft)": 8.2, "Height (ft)": 9.8, "Weight Capacity (kg)": 10000},
+        {"Name": "Large Truck", "Length (ft)": 39.4, "Width (ft)": 8.2, "Height (ft)": 11.5, "Weight Capacity (kg)": 15000},
+    ]
 
-# Convert truck dimensions from feet to cubic meters
-for truck in truck_data:
-    truck["Volume (m³)"] = (truck["Length (ft)"] / METER_TO_FEET) * \
-                           (truck["Width (ft)"] / METER_TO_FEET) * \
-                           (truck["Height (ft)"] / METER_TO_FEET)
+    # Convert truck dimensions from feet to cubic meters
+    for truck in truck_data:
+        truck["Volume (m³)"] = (truck["Length (ft)"] / METER_TO_FEET) * \
+                               (truck["Width (ft)"] / METER_TO_FEET) * \
+                               (truck["Height (ft)"] / METER_TO_FEET)
 
-# Optimize truck selection and calculate number of rolls per truck
-rolls_accommodated = optimize_truck_selection(truck_data, total_volume_required, total_weight_required, roll_volume, roll_weight)
+    # Optimize truck selection and calculate number of rolls per truck
+    rolls_accommodated = optimize_truck_selection(truck_data, total_volume_required, total_weight_required, roll_volume, roll_weight)
 
-# Display the result
-if rolls_accommodated:
-    st.write(f'Total Rolls: {number_of_rolls}')
-    for truck in rolls_accommodated:
-        st.write(f'{truck["Name"]} can accommodate {truck["Rolls Accommodated"]} rolls')
-        st.write(f'Volume Remaining: {truck["Volume (m³) Remaining"]:.2f} m³')
-        st.write(f'Weight Remaining: {truck["Weight (kg) Remaining"]:.2f} kg')
+    # Display the result
+    if rolls_accommodated:
+        st.write(f'Total Rolls: {number_of_rolls}')
+        for truck in rolls_accommodated:
+            st.write(f'{truck["Name"]} can accommodate {truck["Rolls Accommodated"]} rolls')
+            st.write(f'Volume Remaining: {truck["Volume (m³) Remaining"]:.2f} m³')
+            st.write(f'Weight Remaining: {truck["Weight (kg) Remaining"]:.2f} kg')
+    else:
+        st.write('Not all rolls can be accommodated. Consider using more trucks or adjusting roll specifications.')
 else:
-    st.write('Not all rolls can be accommodated. Consider using more trucks or adjusting roll specifications.')
+    st.write("Please ensure the diameter and length of the roll are greater than zero.")
