@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 import math
 
 # Conversion factor: 1 meter = 3.28084 feet
@@ -12,13 +11,10 @@ def calculate_roll_volume(diameter, length):
 # Function to optimize truck selection using a greedy algorithm
 def optimize_truck_selection(truck_data, total_volume_required, total_weight_required):
     # Sort trucks by volume and weight capacity
-    truck_data["Volume (m³)"] = (truck_data["Length (ft)"] / METER_TO_FEET) * \
-                                (truck_data["Width (ft)"] / METER_TO_FEET) * \
-                                (truck_data["Height (ft)"] / METER_TO_FEET)
-    truck_data = truck_data.sort_values(by=["Volume (m³)", "Weight Capacity (kg)"])
-    
+    truck_data = sorted(truck_data, key=lambda x: (x["Volume (m³)"], x["Weight Capacity (kg)"]))
+
     trucks_used = []
-    for _, truck in truck_data.iterrows():
+    for truck in truck_data:
         if total_volume_required <= 0 and total_weight_required <= 0:
             break
         if truck["Volume (m³)"] > 0 and truck["Weight Capacity (kg)"] > 0:
@@ -31,7 +27,7 @@ def optimize_truck_selection(truck_data, total_volume_required, total_weight_req
     return trucks_used
 
 # Streamlit app
-st.title('Optimized Truck Selection for Multiple Roll Types with Excel Upload')
+st.title('Optimized Truck Selection for Multiple Roll Types')
 
 # Input for multiple roll types
 st.header('Roll Specifications')
@@ -52,24 +48,27 @@ for i in range(roll_types):
     total_volume_required += roll_volume * number_of_rolls
     total_weight_required += roll_weight * number_of_rolls
 
-# Upload truck dimensions from an Excel file
-st.header('Upload Truck Dimensions Excel File')
-uploaded_file = st.file_uploader("Choose an Excel file", type="xlsx")
+# Predefined truck dimensions (no Excel upload)
+truck_data = [
+    {"Name": "Small Truck", "Length (ft)": 19.7, "Width (ft)": 8.2, "Height (ft)": 8.2, "Weight Capacity (kg)": 5000},
+    {"Name": "Medium Truck", "Length (ft)": 26.2, "Width (ft)": 8.2, "Height (ft)": 9.8, "Weight Capacity (kg)": 10000},
+    {"Name": "Large Truck", "Length (ft)": 39.4, "Width (ft)": 8.2, "Height (ft)": 11.5, "Weight Capacity (kg)": 15000},
+]
 
-if uploaded_file:
-    # Read the Excel file
-    truck_data = pd.read_excel(uploaded_file)
-    
-    # Optimize truck selection
-    trucks_used = optimize_truck_selection(truck_data, total_volume_required, total_weight_required)
+# Convert truck dimensions from feet to cubic meters
+for truck in truck_data:
+    truck["Volume (m³)"] = (truck["Length (ft)"] / METER_TO_FEET) * \
+                           (truck["Width (ft)"] / METER_TO_FEET) * \
+                           (truck["Height (ft)"] / METER_TO_FEET)
 
-    # Display the result
-    if trucks_used:
-        st.write(f'Total Trucks Used: {len(trucks_used)}')
-        for truck in trucks_used:
-            st.write(f'{truck["Name"]}: {truck["Length (ft)"]} ft (L) x {truck["Width (ft)"]} ft (W) x {truck["Height (ft)"]} ft (H)')
-            st.write(f'Weight Capacity: {truck["Weight Capacity (kg)"]} kg')
-    else:
-        st.write('No suitable combination of trucks found. Consider using more or different trucks.')
+# Optimize truck selection
+trucks_used = optimize_truck_selection(truck_data, total_volume_required, total_weight_required)
+
+# Display the result
+if trucks_used:
+    st.write(f'Total Trucks Used: {len(trucks_used)}')
+    for truck in trucks_used:
+        st.write(f'{truck["Name"]}: {truck["Length (ft)"]} ft (L) x {truck["Width (ft)"]} ft (W) x {truck["Height (ft)"]} ft (H)')
+        st.write(f'Weight Capacity: {truck["Weight Capacity (kg)"]} kg')
 else:
-    st.write('Please upload a truck dimensions Excel file.')
+    st.write('No suitable combination of trucks found. Consider using more or different trucks.')
