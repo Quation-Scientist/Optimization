@@ -21,7 +21,7 @@ def optimize_truck_selection(truck_data, total_volume_required, total_weight_req
             truck_volume_remaining = truck["Volume (m³)"]
             truck_weight_remaining = truck["Weight Capacity (kg)"]
 
-            # Calculate how many rolls this truck can carry based on volume and weight
+            # Calculate how many rolls this truck can carry
             rolls_by_volume = truck_volume_remaining // roll_volume
             rolls_by_weight = truck_weight_remaining // roll_weight
             rolls_in_truck = min(rolls_by_volume, rolls_by_weight)
@@ -91,14 +91,6 @@ if roll_volume > 0:
             st.error(f"TypeError: Incorrect type used in truck dimension conversion: {e}")
         except Exception as e:
             st.error(f"Unexpected error: {e}")
-
-    # Display the truck's individual capacity for rolls based on their volume and weight
-    st.subheader('Truck Capacity Overview (in terms of Rolls)')
-    for truck in truck_data:
-        rolls_by_volume = truck["Volume (m³)"] // roll_volume
-        rolls_by_weight = truck["Weight Capacity (kg)"] // roll_weight
-        rolls_possible = min(rolls_by_volume, rolls_by_weight)
-        st.write(f"{truck['Name']} can hold up to {rolls_possible} rolls based on its capacity.")
 
     # Optimize truck selection and calculate number of rolls per truck
     rolls_accommodated = optimize_truck_selection(truck_data, total_volume_required, total_weight_required, roll_volume, roll_weight)
