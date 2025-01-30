@@ -37,6 +37,7 @@ def optimize_loading(trucks, rolls):
                                         truck['width'] * FEET_TO_INCHES, 
                                         truck['height'] * FEET_TO_INCHES)
         remaining_volume = truck_volume
+        remaining_weight = truck['max_weight']
         
         # Initialize counts
         roll_counts = {f"roll_type_{i+1}": 0 for i in range(len(rolls))}
@@ -44,17 +45,25 @@ def optimize_loading(trucks, rolls):
         # Sort rolls by volume (descending)
         sorted_rolls = sorted(rolls, key=lambda r: r['volume'], reverse=True)
         
-        # Fit rolls using honeycomb pattern
+        # Fit rolls using honeycomb pattern and weight constraint
         for i, roll in enumerate(sorted_rolls):
             if roll['quantity'] > 0:
                 max_fit = optimize_honeycomb_packing(truck['width'] * FEET_TO_INCHES, truck['length'] * FEET_TO_INCHES, roll['diameter'])
                 actual_fit = min(max_fit, roll['quantity'])
-                roll_counts[f"roll_type_{i+1}"] = actual_fit
+                total_weight = actual_fit * roll['weight']
+                
+                if total_weight <= remaining_weight:
+                    roll_counts[f"roll_type_{i+1}"] = actual_fit
+                    remaining_weight -= total_weight
+                else:
+                    roll_counts[f"roll_type_{i+1}"] = remaining_weight // roll['weight']
+                    remaining_weight = 0
         
         results.append({
             'truck': truck,
             'roll_counts': roll_counts,
-            'remaining_volume': remaining_volume
+            'remaining_volume': remaining_volume,
+            'remaining_weight': remaining_weight
         })
     
     return results
@@ -72,8 +81,9 @@ for i in range(num_trucks):
     length = st.sidebar.number_input(f"Length (ft) for Truck Type {i+1}", min_value=1.0, step=0.1)
     width = st.sidebar.number_input(f"Width (ft) for Truck Type {i+1}", min_value=1.0, step=0.1)
     height = st.sidebar.number_input(f"Height (ft) for Truck Type {i+1}", min_value=1.0, step=0.1)
+    max_weight = st.sidebar.number_input(f"Max Weight (lbs) for Truck Type {i+1}", min_value=100.0, step=50.0)
     quantity = st.sidebar.number_input(f"Quantity for Truck Type {i+1}", min_value=1, step=1)
-    trucks.append({'length': length, 'width': width, 'height': height, 'quantity': quantity})
+    trucks.append({'length': length, 'width': width, 'height': height, 'max_weight': max_weight, 'quantity': quantity})
 
 # Input for rolls (in inches)
 num_rolls = st.sidebar.number_input("Number of Roll Types", min_value=1, step=1)
@@ -82,9 +92,10 @@ for i in range(num_rolls):
     st.sidebar.subheader(f"Roll Type {i+1}")
     diameter = st.sidebar.number_input(f"Diameter (in) for Roll Type {i+1}", min_value=0.1, step=0.1)
     length = st.sidebar.number_input(f"Length (in) for Roll Type {i+1}", min_value=0.1, step=0.1)
+    weight = st.sidebar.number_input(f"Weight (lbs) for Roll Type {i+1}", min_value=1.0, step=0.1)
     quantity = st.sidebar.number_input(f"Quantity for Roll Type {i+1}", min_value=1, step=1)
     volume = calculate_cylinder_volume(diameter, length)
-    rolls.append({'diameter': diameter, 'length': length, 'quantity': quantity, 'volume': volume})
+    rolls.append({'diameter': diameter, 'length': length, 'weight': weight, 'quantity': quantity, 'volume': volume})
 
 # Add a run button
 if st.button("Run Optimization"):
@@ -95,3 +106,4 @@ if st.button("Run Optimization"):
         st.write("Roll Counts:")
         st.table(pd.DataFrame(result['roll_counts'].items(), columns=['Roll Type', 'Count']))
         st.write(f"Remaining Volume: {result['remaining_volume']} cubic inches")
+        st.write(f"Remaining Weight: {result['remaining_weight']} lbs")
