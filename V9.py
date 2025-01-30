@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import math
 import io
+import matplotlib.pyplot as plt
 
 # Conversion factors
 FEET_TO_INCHES = 12
@@ -23,11 +24,16 @@ def optimize_honeycomb_packing(truck_width, truck_length, roll_diameter):
     max_cols = int(truck_width // roll_diameter)
     
     total_rolls = 0
+    positions = []
     for row in range(max_rows):
         cols = max_cols if row % 2 == 0 else max_cols - 1  # Alternate row shifting
+        for col in range(cols):
+            x = col * roll_diameter + (roll_diameter / 2 if row % 2 != 0 else 0)
+            y = row * row_spacing
+            positions.append((x, y))
         total_rolls += cols
     
-    return total_rolls
+    return total_rolls, positions
 
 # Function to optimize loading
 def optimize_loading(trucks, rolls):
@@ -49,7 +55,7 @@ def optimize_loading(trucks, rolls):
         # Fit rolls using honeycomb pattern and weight constraint
         for i, roll in enumerate(sorted_rolls):
             if roll['quantity'] > 0:
-                max_fit = optimize_honeycomb_packing(truck['width'] * FEET_TO_INCHES, truck['length'] * FEET_TO_INCHES, roll['diameter'])
+                max_fit, positions = optimize_honeycomb_packing(truck['width'] * FEET_TO_INCHES, truck['length'] * FEET_TO_INCHES, roll['diameter'])
                 actual_fit = min(max_fit, roll['quantity'])
                 total_weight = actual_fit * roll['weight'] * LBS_TO_KG  # Convert to KG
                 
@@ -64,10 +70,23 @@ def optimize_loading(trucks, rolls):
             'truck': truck,
             'roll_counts': roll_counts,
             'remaining_volume': remaining_volume,
-            'remaining_weight': remaining_weight
+            'remaining_weight': remaining_weight,
+            'positions': positions
         })
     
     return results
+
+# Function to visualize the honeycomb pattern
+def visualize_honeycomb(positions, roll_diameter, truck_width, truck_length):
+    fig, ax = plt.subplots(figsize=(8, 6))
+    for x, y in positions:
+        circle = plt.Circle((x, y), roll_diameter / 2, color='blue', alpha=0.5)
+        ax.add_patch(circle)
+    ax.set_xlim(0, truck_width * FEET_TO_INCHES)
+    ax.set_ylim(0, truck_length * FEET_TO_INCHES)
+    ax.set_aspect('equal')
+    ax.set_title("Honeycomb Roll Placement")
+    st.pyplot(fig)
 
 # Streamlit App
 st.title("Truck Load Optimization")
@@ -108,3 +127,6 @@ if st.button("Run Optimization"):
         st.table(pd.DataFrame(result['roll_counts'].items(), columns=['Roll Type', 'Count']))
         st.write(f"Remaining Volume: {result['remaining_volume']} cubic inches")
         st.write(f"Remaining Weight: {result['remaining_weight']} kg")
+        
+        # Visualization of Honeycomb Pattern
+        visualize_honeycomb(result['positions'], rolls[0]['diameter'], result['truck']['width'], result['truck']['length'])
